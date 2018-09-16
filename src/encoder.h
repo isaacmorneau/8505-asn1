@@ -14,11 +14,13 @@ typedef struct {
     size_t slice;//how much at a time in bytes
 } encoder_msg_t;
 
-void encoder_init(encoder_msg_t * enc, uint8_t* msg, size_t len, size_t slice_len);
+void outbound_encoder_init(encoder_msg_t * enc, uint8_t* msg, size_t len, size_t slice_len);
+void inbound_encoder_init(encoder_msg_t * enc, uint16_t size, size_t slice_len);
 void encoder_close(encoder_msg_t * enc);
 
 //for sending data
-void encoder_get_next(encoder_msg_t* enc, uint8_t* slice);
+//0 on success non zero on unused bytes
+int encoder_get_next(encoder_msg_t* enc, uint8_t* slice);
 //for recieving data
 void encoder_add_next(encoder_msg_t* enc, uint8_t* slice);
 //is the CRC32 valid
