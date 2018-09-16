@@ -1,20 +1,28 @@
+#include <fcntl.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include "network.h"
 
-void set_non_blocking (int sfd) {
+void set_non_blocking(int sfd) {
     int flags;
     ensure((flags = fcntl(sfd, F_GETFL, 0)) != -1);
     flags |= O_NONBLOCK;
     ensure(fcntl(sfd, F_SETFL, flags) != -1);
 }
 
-void make_storage(struct sockaddr_storage * restrict addr, const char * restrict host, int port) {
+void make_storage(struct sockaddr_storage *restrict addr, const char *restrict host, int port) {
     struct addrinfo hints;
-    struct addrinfo * rp;
+    struct addrinfo *rp;
 
-    memset(&hints, 0, sizeof (struct addrinfo));
-    hints.ai_family = AF_UNSPEC;
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_flags = AI_PASSIVE;// All interfaces
+    hints.ai_flags    = AI_PASSIVE; // All interfaces
 
     //null the service as it only accepts strings and we have the port already
     ensure(getaddrinfo(host, NULL, &hints, &rp) == 0);
@@ -39,14 +47,14 @@ int make_bound_udp(int port) {
     struct sockaddr_in sin;
     int sockfd;
 
-    ensure((sockfd = socket(AF_INET, SOCK_DGRAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0)) == -1);
+    ensure((sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1);
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    sin.sin_port = htons(port);
-    sin.sin_family = AF_INET;
+    sin.sin_port        = htons(port);
+    sin.sin_family      = AF_INET;
 
-    ensure(bind(sockfd, (struct sockaddr *) &sin, sizeof(sin)) == -1);
+    ensure(bind(sockfd, (struct sockaddr *)&sin, sizeof(sin)) == -1);
 
     return sockfd;
 }
@@ -57,17 +65,17 @@ int make_epoll() {
     return efd;
 }
 
-int wait_epoll(int efd, struct epoll_event * restrict events) {
+int wait_epoll(int efd, struct epoll_event *restrict events) {
     int ret;
     ensure((ret = epoll_wait(efd, events, MAXEVENTS, -1)) != -1);
     return ret;
 }
 
-int add_epoll_ptr(int efd, int ifd, void * ptr) {
+int add_epoll_ptr(int efd, int ifd, void *ptr) {
     int ret;
     static struct epoll_event event;
     event.data.ptr = ptr;
-    event.events = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
+    event.events   = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
     ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
     return ret;
 }
@@ -76,7 +84,7 @@ int add_epoll_fd(int efd, int ifd) {
     int ret;
     static struct epoll_event event;
     event.data.fd = ifd;
-    event.events = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
+    event.events  = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
     ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
     return ret;
 }

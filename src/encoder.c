@@ -1,10 +1,12 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "crc32.h"
 #include "encoder.h"
 
-void outbound_encoder_init(encoder_msg_t* enc, uint8_t* msg, size_t len, size_t slice_len) {
+void outbound_encoder_init(
+    encoder_msg_t* enc, const uint8_t* msg, const size_t len, const size_t slice_len) {
     enc->size   = sizeof(uint16_t) + len + sizeof(uint32_t);
     enc->buffer = malloc(enc->size);
     enc->crc32  = (uint32_t)-1;
@@ -13,29 +15,28 @@ void outbound_encoder_init(encoder_msg_t* enc, uint8_t* msg, size_t len, size_t 
     enc->slice  = slice_len;
 
     //move the size into the buffer
-    uint16_t * sbuff = (uint16_t*)enc->buffer;
-    *sbuff = enc->size;
+    uint16_t* sbuff = (uint16_t*)enc->buffer;
+    *sbuff          = enc->size;
 
     //move the data into the buffer
     memcpy(enc->buffer + sizeof(uint16_t), msg, len);
 
     //calculate and move the crc into the buffer
-    enc->crc32 = xcrc32(enc->buffer, sizeof(uint16_t) + len, (uint32_t)-1);
-    uint32_t * cbuff = (uint32_t*)(enc->buffer + sizeof(uint16_t) + len);
-    *cbuff = enc->crc32;
+    enc->crc32      = xcrc32(enc->buffer, sizeof(uint16_t) + len, (uint32_t)-1);
+    uint32_t* cbuff = (uint32_t*)(enc->buffer + sizeof(uint16_t) + len);
+    *cbuff          = enc->crc32;
 }
 
-void inbound_encoder_init(encoder_msg_t * enc, uint16_t size, size_t slice_len) {
+void inbound_encoder_init(encoder_msg_t* enc, const uint16_t size, const size_t slice_len) {
     enc->size   = size;
     enc->buffer = malloc(enc->size);
     //dont bother to initialize crc
-    enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
-    enc->index = sizeof(uint16_t);
+    enc->len   = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+    enc->index = 0;
     enc->slice = slice_len;
 
-    uint16_t * sbuff = (uint16_t*)enc->buffer;
-    *sbuff = enc->size;
-
+    uint16_t* sbuff = (uint16_t*)enc->buffer;
+    *sbuff          = enc->size;
 }
 
 void encoder_close(encoder_msg_t* enc) {
@@ -58,7 +59,7 @@ int encoder_get_next(encoder_msg_t* enc, uint8_t* slice) {
     return enc->slice - i;
 }
 
-void encoder_add_next(encoder_msg_t* enc, uint8_t* slice) {
+void encoder_add_next(encoder_msg_t* enc, const uint8_t* slice) {
     size_t i = 0;
     for (; i < enc->slice; ++i) {
         if (enc->index < enc->size) {
@@ -71,14 +72,24 @@ void encoder_add_next(encoder_msg_t* enc, uint8_t* slice) {
 }
 
 int encoder_verify(encoder_msg_t* enc) {
-    uint32_t * cbuff = (uint32_t*)(enc->buffer + enc->size - sizeof(uint32_t));
-    enc->crc32 = *cbuff;
-
-    uint32_t actual = xcrc32(enc->buffer, sizeof(uint16_t) + len, (uint32_t)-1);
+    uint32_t actual = xcrc32(enc->buffer, enc->size - sizeof(uint32_t), (uint32_t)-1);
+    uint32_t* cbuff = (uint32_t*)(enc->buffer + enc->size - sizeof(uint32_t));
+    enc->crc32      = *cbuff;
 
     return enc->crc32 == actual;
 }
 
 int encoder_finished(encoder_msg_t* enc) {
-    return enc->index == enc->len;
+    return enc->index == enc->size;
+}
+
+void encoder_print(encoder_msg_t* enc) {
+    printf("[message data]\nsize: %u\ndata: %.*s\ncrc32: 0x%X\n", enc->size, enc->len,
+        enc->buffer + sizeof(uint16_t), enc->crc32);
+    printf("[internal data]\nindex: %u\nslice: %u\nlen: %u\n", enc->index, enc->slice, enc->len);
+    puts("[raw hex]");
+    for (size_t i = 0; i < enc->size; ++i) {
+        printf("%02X ", enc->buffer[i]);
+    }
+    puts("");
 }
