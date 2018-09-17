@@ -1,18 +1,53 @@
-#include <unistd.h>
-#include <stdio.h>
 #include <getopt.h>
-#include <stdlib.h>
 #include <pthread.h>
-#include "test.h"
-#include "server.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/epoll.h>
+#include <unistd.h>
+
 #include "network.h"
+#include "test.h"
+
+void* server_handler(void* vport) {
+    int efd = make_epoll();
+    int sfd = make_bound_udp(*(int*)vport);
+    set_non_blocking(sfd);
+
+    struct epoll_event* events = make_epoll_events();
+
+    add_epoll_fd(efd, sfd);
+
+    while (1) {
+        static int n, i, infd;
+        n = wait_epoll(efd, events);
+        for (i = 0; i < n; i++) {
+            if (EVENT_ERR(events, i) || EVENT_HUP(events, i)) {
+                // a socket got closed
+                continue;
+            } else if (EVENT_IN(events, i)) {
+                infd = EVENT_FD(events, i);
+                //
+            }
+        }
+    }
+
+    free(events);
+}
+
+void start_listening(const int port) {
+    pthread_t th_id;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_create(&th_id, &attr, server_handler, (void*)&port);
+    pthread_detach(th_id);
+}
 
 int main(int argc, char** argv) {
-    const char* port = "38499";
+    const int port = 34854;
     int choice;
     while (1) {
-        static struct option long_options[]
-            = {{"version", no_argument, 0, 'v'}, {"tests", no_argument, 0, 't'},{"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
+            {"tests", no_argument, 0, 't'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 
         int option_index = 0;
 
@@ -42,37 +77,4 @@ int main(int argc, char** argv) {
     start_listening(port);
 
     return EXIT_SUCCESS;
-}
-
-void* server_handler(void* vport) {
-    int sfd = make_bound_udp(*(int*)vport);
-    set_non_blocking(sfd);
-    int efd = make_epoll();
-    epoll_event* events = make_epoll_events();
-
-    add_epoll_fd(efd, sfd);
-
-    while (1) {
-        static int n, i, infd;
-        n = wait_epoll(efd, events);
-        for (i = 0; i < n; i++) {
-            if (EVENT_ERR(events, i) || EVENT_HUP(events, i)) {
-                // a socket got closed
-                continue;
-            } else if (EVENT_IN(events, i)) {
-                infd = EVENT_FD(events, i);
-                //
-            }
-        }
-    }
-
-    free(events);
-}
-
-void start_listening(const int port) {
-    pthread_t th_id;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_create(&th_id, &attr, server_handler, (void*)&port);
-    pthread_detach(th_id);
 }

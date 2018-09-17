@@ -39,9 +39,7 @@ int make_bound_udp(int port);
 #define EVENT_PTR(events, i) (events[i].data.ptr)
 
 int make_epoll();
-inline struct epoll_event * make_epoll_events() {
-    return (struct epoll_event *)malloc(sizeof(struct epoll_event)*MAXEVENTS);
-}
+struct epoll_event * make_epoll_events();
 int wait_epoll(int efd, struct epoll_event * events);
 int add_epoll_ptr(int efd, int ifd, void * ptr);
 int add_epoll_fd(int efd, int ifd);

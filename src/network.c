@@ -8,6 +8,10 @@
 
 #include "network.h"
 
+struct epoll_event * make_epoll_events() {
+    return (struct epoll_event *)malloc(sizeof(struct epoll_event)*MAXEVENTS);
+}
+
 void set_non_blocking(int sfd) {
     int flags;
     ensure((flags = fcntl(sfd, F_GETFL, 0)) != -1);
@@ -89,7 +93,9 @@ int add_epoll_fd(int efd, int ifd) {
     return ret;
 }
 
-int extract_udp_slice(int sfd, struct sockaddr_storage* storage, uint8_t* slice) {
-    static buffer[1024];
-    ensure(recvfrom(sfd, buffer, 1024, 0, storage, sizeof(struct sockaddr_storage)));
+int extract_udp_slice(int sfd, struct sockaddr_storage *storage, uint8_t *slice) {
+    static char buffer[1024];
+    static socklen_t len = sizeof(struct sockaddr_storage);
+    ensure(recvfrom(sfd, buffer, 1024, 0, (struct sockaddr *)storage, &len));
+    return 0;
 }
