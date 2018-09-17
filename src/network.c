@@ -88,3 +88,8 @@ int add_epoll_fd(int efd, int ifd) {
     ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
     return ret;
 }
+
+int extract_udp_slice(int sfd, struct sockaddr_storage* storage, uint8_t* slice) {
+    static buffer[1024];
+    ensure(recvfrom(sfd, buffer, 1024, 0, storage, sizeof(struct sockaddr_storage)));
+}

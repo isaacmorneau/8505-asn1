@@ -45,3 +45,5 @@ inline struct epoll_event * make_epoll_events() {
 int wait_epoll(int efd, struct epoll_event * events);
 int add_epoll_ptr(int efd, int ifd, void * ptr);
 int add_epoll_fd(int efd, int ifd);
+
+int extract_udp_slice(int sfd, struct sockaddr_storage* storage, uint8_t* slice);

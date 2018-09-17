@@ -32,6 +32,7 @@ void inbound_encoder_init(encoder_msg_t* enc, const uint16_t size, const size_t 
     enc->buffer = malloc(enc->size);
     //dont bother to initialize crc
     enc->len   = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+    //to keep the interfact the same start at 0 though the first uint16_t size is already known
     enc->index = 0;
     enc->slice = slice_len;
 
