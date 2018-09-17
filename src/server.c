@@ -26,7 +26,12 @@ void* server_handler(void* vport) {
                 continue;
             } else if (EVENT_IN(events, i)) {
                 infd = EVENT_FD(events, i);
-                //
+                static uint8_t slice[2];
+                static struct sockaddr_storage storage;
+                extract_udp_slice(infd, &storage, slice);
+                printf(">%02X %02X\n", slice[0], slice[1]);
+                //TODO respond with ICMP
+                //TODO add slice to encoder fragment
             }
         }
     }
@@ -39,7 +44,9 @@ void start_listening(const int port) {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_create(&th_id, &attr, server_handler, (void*)&port);
-    pthread_detach(th_id);
+    //pthread_detach(th_id);
+    void* ret;
+    pthread_join(th_id, ret);
 }
 
 int main(int argc, char** argv) {

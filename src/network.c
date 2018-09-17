@@ -51,14 +51,14 @@ int make_bound_udp(int port) {
     struct sockaddr_in sin;
     int sockfd;
 
-    ensure((sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1);
+    ensure((sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) != -1);
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
     sin.sin_port        = htons(port);
     sin.sin_family      = AF_INET;
 
-    ensure(bind(sockfd, (struct sockaddr *)&sin, sizeof(sin)) == -1);
+    ensure(bind(sockfd, (struct sockaddr *)&sin, sizeof(sin)) != -1);
 
     return sockfd;
 }
@@ -96,6 +96,13 @@ int add_epoll_fd(int efd, int ifd) {
 int extract_udp_slice(int sfd, struct sockaddr_storage *storage, uint8_t *slice) {
     static char buffer[1024];
     static socklen_t len = sizeof(struct sockaddr_storage);
-    ensure(recvfrom(sfd, buffer, 1024, 0, (struct sockaddr *)storage, &len));
+    ensure(recvfrom(sfd, buffer, 1024, 0, (struct sockaddr *)storage, &len) != -1);
+    if (storage->ss_family == AF_INET6) {
+        return 1;//we cant handle V6 yet
+    }
+    struct sockaddr_in* addr = (struct sockaddr_in*)storage;
+    uint16_t* wslice = (uint16_t*)slice;
+    *wslice = addr->sin_port;
+
     return 0;
 }
