@@ -94,3 +94,14 @@ void encoder_print(encoder_msg_t* enc) {
     }
     puts("");
 }
+
+size_t transcode_size(uint8_t* buffer, size_t len) {
+    size_t total = 0;
+    for (;len;--len)
+        if (!buffer[len] || buffer[len] == 0xFF)
+            ++total;
+    return total;
+}
+void transcode(uint8_t* dest, uint8_t* src, size_t len) {
+
+}

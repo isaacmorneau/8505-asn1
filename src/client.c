@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+#include "network.h"
+#include "encoder.h"
 
 int main(int argc, char** argv) {
     int choice;
@@ -29,6 +33,15 @@ int main(int argc, char** argv) {
                 return EXIT_FAILURE;
         }
     }
+
+    uint8_t slice[2];
+    slice[0] = 0;
+    slice[1] = 0;
+
+    struct sockaddr_storage storage;
+    make_storage(&storage, "127.0.0.1", 34854);
+
+    insert_udp_slice(&storage, slice);
 
     return EXIT_SUCCESS;
 }

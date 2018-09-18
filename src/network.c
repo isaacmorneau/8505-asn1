@@ -5,11 +5,12 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "network.h"
 
-struct epoll_event * make_epoll_events() {
-    return (struct epoll_event *)malloc(sizeof(struct epoll_event)*MAXEVENTS);
+struct epoll_event *make_epoll_events() {
+    return (struct epoll_event *)malloc(sizeof(struct epoll_event) * MAXEVENTS);
 }
 
 void set_non_blocking(int sfd) {
@@ -93,16 +94,30 @@ int add_epoll_fd(int efd, int ifd) {
     return ret;
 }
 
-int extract_udp_slice(int sfd, struct sockaddr_storage *storage, uint8_t *slice) {
-    static char buffer[1024];
+int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {
+    static char buffer[UDP_SLICE];
     static socklen_t len = sizeof(struct sockaddr_storage);
-    ensure(recvfrom(sfd, buffer, 1024, 0, (struct sockaddr *)storage, &len) != -1);
+    ensure(recvfrom(sfd, buffer, UDP_SLICE, 0, (struct sockaddr *)storage, &len) != -1);
     if (storage->ss_family == AF_INET6) {
-        return 1;//we cant handle V6 yet
+        return 1; //we cant handle V6 yet
     }
-    struct sockaddr_in* addr = (struct sockaddr_in*)storage;
-    uint16_t* wslice = (uint16_t*)slice;
-    *wslice = addr->sin_port;
+    struct sockaddr_in *addr = (struct sockaddr_in *)storage;
+    //as the slice is two bytes use a uint16_t to copy both
+    uint16_t *wslice = (uint16_t *)slice;
+    *wslice          = addr->sin_port;
+
+    return 0;
+}
+
+int insert_udp_slice(struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {
+    static char buffer[UDP_SLICE];
+    static socklen_t len = sizeof(struct sockaddr_storage);
+
+    int sfd = make_bound_udp(*(uint16_t *)slice);
+
+    ensure(sendto(sfd, buffer, 0, 0, (struct sockaddr *)storage, len) != -1);
+
+    close(sfd);
 
     return 0;
 }
