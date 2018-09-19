@@ -58,4 +58,43 @@ void run_encoders_tests() {
             encoder_close(&enc_out);
         }
     }
+    puts("\ntr encoding test\n");
+    {
+        uint8_t test[6];
+        test[0] = 'h';
+        test[1] = 'i';
+        test[2] = 0x0;
+        test[3] = '!';
+        test[4] = 0xFF;
+        test[5] = 0xFF;
+
+        puts("raw data");
+        for (size_t i = 0; i < sizeof(test); ++i) {
+            printf("%02X ", test[i]);
+        }
+
+        size_t s = tr_size(test, sizeof(test));
+
+        printf("\ntr size: %lu\n", s);
+
+        uint8_t* test2 = malloc(s);
+
+        tr_encode(test2, test, sizeof(test));
+
+        puts("encoded data");
+        for (size_t i = 0; i < s; ++i) {
+            printf("%02X ", test2[i]);
+        }
+
+        tr_decode(test, test2, s);
+
+        puts("\ndecoded data");
+
+        for (size_t i = 0; i < sizeof(test); ++i) {
+            printf("%02X ", test[i]);
+        }
+
+        puts("");
+
+    }
 }

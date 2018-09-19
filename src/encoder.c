@@ -31,7 +31,7 @@ void inbound_encoder_init(encoder_msg_t* enc, const uint16_t size, const size_t 
     enc->size   = size;
     enc->buffer = malloc(enc->size);
     //dont bother to initialize crc
-    enc->len   = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+    enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
     //to keep the interfact the same start at 0 though the first uint16_t size is already known
     enc->index = 0;
     enc->slice = slice_len;
@@ -95,13 +95,45 @@ void encoder_print(encoder_msg_t* enc) {
     puts("");
 }
 
-size_t transcode_size(uint8_t* buffer, size_t len) {
-    size_t total = 0;
-    for (;len;--len)
-        if (!buffer[len] || buffer[len] == 0xFF)
+size_t tr_size(uint8_t* buffer, size_t len) {
+    size_t total = len;
+    for (size_t i = 0; i < len; ++i) {
+        if (!buffer[i] || buffer[i] == 0xFF) {
             ++total;
+        }
+    }
     return total;
 }
-void transcode(uint8_t* dest, uint8_t* src, size_t len) {
 
+void tr_encode(uint8_t* dest, uint8_t* src, size_t len) {
+    for (size_t i = 0, j = 0; i < len; ++i) {
+        if (!src[i]) { //0
+            dest[j++] = 0xFF;
+            dest[j++] = 0xF0; //0
+        } else if (src[i] == 0xFF) { //0xFF
+            dest[j++] = 0xFF;
+            dest[j++] = 0xFF; //0xFF
+        } else {
+            dest[j++] = src[i];
+        }
+    }
+}
+
+size_t tr_decode(uint8_t* dest, uint8_t* src, size_t len) {
+    size_t ret = len;
+    for (size_t i = 0, j = 0; i < len; ++i) {
+        if (src[i] == 0xFF) {
+            if (i + 1 < len) {//bounds check for good mesure
+                --ret;
+                if (src[i++] == 0xF0) {
+                    dest[j++] = 0;
+                } else {
+                    dest[j++] = 0xFF;
+                }
+            }
+        } else {
+            dest[j++] = src[i];
+        }
+    }
+    return ret;
 }

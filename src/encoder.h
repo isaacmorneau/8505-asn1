@@ -30,3 +30,13 @@ int encoder_verify(encoder_msg_t* enc);
 int encoder_finished(encoder_msg_t* enc);
 //print all info on the struct, useful for debugging
 void encoder_print(encoder_msg_t* enc);
+
+
+//find size to allocate for the transcoded buffer
+size_t tr_size(uint8_t* buffer, size_t len);
+//perform transcoding
+//len is src length
+void tr_encode(uint8_t* dest, uint8_t* src, size_t len);
+//perform transcoding
+//len is src len, ret is new len
+size_t tr_decode(uint8_t* dest, uint8_t* src, size_t len);
