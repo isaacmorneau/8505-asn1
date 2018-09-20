@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +7,7 @@
 #include "encoder.h"
 
 void outbound_encoder_init(
-    encoder_msg_t* enc, const uint8_t* msg, const size_t len, const size_t slice_len) {
+    encoder_frame_t* enc, const uint8_t* msg, const size_t len, const size_t slice_len) {
     enc->size   = sizeof(uint16_t) + len + sizeof(uint32_t);
     enc->buffer = malloc(enc->size);
     enc->crc32  = (uint32_t)-1;
@@ -25,30 +26,50 @@ void outbound_encoder_init(
     enc->crc32      = xcrc32(enc->buffer, sizeof(uint16_t) + len, (uint32_t)-1);
     uint32_t* cbuff = (uint32_t*)(enc->buffer + sizeof(uint16_t) + len);
     *cbuff          = enc->crc32;
+
+    size_t trs = tr_size(enc->buffer, enc->size);
+    //zeros detected, remove zeros with encoding
+    if (trs != enc->size) {
+        //create new buffer to move to
+        uint8_t* trtmp = malloc(trs);
+        tr_encode(trtmp, enc->buffer, enc->size);
+
+        //finish swap to the new buffer
+        free(enc->buffer);
+        enc->buffer = trtmp;
+        enc->size   = trs;
+    }
+    enc->partial_byte_eh = false;
 }
 
-void inbound_encoder_init(encoder_msg_t* enc, const uint16_t size, const size_t slice_len) {
-    enc->size   = size;
-    enc->buffer = malloc(enc->size);
-    //dont bother to initialize crc
-    enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
-    //to keep the interfact the same start at 0 though the first uint16_t size is already known
+void inbound_encoder_init(encoder_frame_t* enc, const uint16_t size, const size_t slice_len) {
+    if (enc->size) { //we know the frame size
+        enc->size   = size;
+        enc->buffer = malloc(enc->size);
+        //dont bother to initialize crc
+        enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+        //to keep the interfact the same start at 0 though the first uint16_t size is already known
+    } else { //framesize is unknown
+    }
     enc->index = 0;
     enc->slice = slice_len;
 
     uint16_t* sbuff = (uint16_t*)enc->buffer;
     *sbuff          = enc->size;
+
+    enc->partial_byte_eh = false;
 }
 
-void encoder_close(encoder_msg_t* enc) {
+void encoder_close(encoder_frame_t* enc) {
     memset(enc->buffer, 0, enc->size);
     free(enc->buffer);
     enc->buffer = 0;
 }
 
-int encoder_get_next(encoder_msg_t* enc, uint8_t* slice) {
+int encoder_get_next(encoder_frame_t* enc, uint8_t* slice) {
     size_t i = 0;
 
+    //no need to worry about transcoding on the fly as the complete message is already done in init
     for (; i < enc->slice; ++i) {
         if (enc->index < enc->size) {
             slice[i] = enc->buffer[enc->index++];
@@ -60,19 +81,37 @@ int encoder_get_next(encoder_msg_t* enc, uint8_t* slice) {
     return enc->slice - i;
 }
 
-void encoder_add_next(encoder_msg_t* enc, const uint8_t* slice) {
+void encoder_add_next(encoder_frame_t* enc, const uint8_t* slice) {
     size_t i = 0;
     for (; i < enc->slice; ++i) {
         if (enc->index < enc->size) {
-            enc->buffer[enc->index++] = slice[i];
-        } else {
-            //no need to report on unused slice parts as the structure is filled
+            if (enc->partial_byte_eh) { //last byte excaped this one
+                enc->partial_byte_eh = false;
+                if (slice[i] == 0xFF) {
+                    enc->buffer[enc->index++] = 0xFF;
+                } else {
+                    enc->buffer[enc->index++] = 0;
+                }
+            } else if (slice[i] == 0xFF) { //escape byte incomming
+                if (i + 1 < enc->slice) {
+                    if (slice[++i] == 0xFF) {
+                        enc->buffer[enc->index++] = 0xFF;
+                    } else if (!slice[i]) {
+                        enc->buffer[enc->index++] = 0xF0;
+                    }
+                } else { //escape byte is in the next slice
+                    enc->partial_byte_eh = true;
+                }
+            } else { //regular byte
+                enc->buffer[enc->index++] = slice[i];
+            }
+        } else { //no need to report on unused slice parts as the structure is filled
             break;
         }
     }
 }
 
-int encoder_verify(encoder_msg_t* enc) {
+int encoder_verify(encoder_frame_t* enc) {
     uint32_t actual = xcrc32(enc->buffer, enc->size - sizeof(uint32_t), (uint32_t)-1);
     uint32_t* cbuff = (uint32_t*)(enc->buffer + enc->size - sizeof(uint32_t));
     enc->crc32      = *cbuff;
@@ -80,11 +119,11 @@ int encoder_verify(encoder_msg_t* enc) {
     return enc->crc32 == actual;
 }
 
-int encoder_finished(encoder_msg_t* enc) {
+int encoder_finished(encoder_frame_t* enc) {
     return enc->index == enc->size;
 }
 
-void encoder_print(encoder_msg_t* enc) {
+void encoder_print(encoder_frame_t* enc) {
     printf("[message data]\nsize: %u\ndata: %.*s\ncrc32: 0x%X\n", enc->size, enc->len,
         enc->buffer + sizeof(uint16_t), enc->crc32);
     printf("[internal data]\nindex: %u\nslice: %u\nlen: %u\n", enc->index, enc->slice, enc->len);
@@ -123,7 +162,7 @@ size_t tr_decode(uint8_t* dest, uint8_t* src, size_t len) {
     size_t ret = len;
     for (size_t i = 0, j = 0; i < len; ++i) {
         if (src[i] == 0xFF) {
-            if (i + 1 < len) {//bounds check for good mesure
+            if (i + 1 < len) { //bounds check for good mesure
                 --ret;
                 if (src[i++] == 0xF0) {
                     dest[j++] = 0;
