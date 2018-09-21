@@ -48,11 +48,15 @@ void outbound_encoder_init(encoder_frame_t* restrict enc, const uint8_t* restric
 void inbound_encoder_init(
     encoder_frame_t* restrict enc, const uint16_t len, const size_t slice_len) {
     if (len) { //we know the frame size
+        enc->len  = len;
         enc->size = sizeof(uint16_t) + len + sizeof(uint32_t);
         //TODO check malloc
         enc->buffer = malloc(enc->size);
+        uint16_t* sbuff = (uint16_t*)enc->buffer;
+        *sbuff          = enc->size;
         //dont bother to initialize crc
     } else { //framesize is unknown
+        enc->len    = 0;
         enc->size   = 0;
         enc->buffer = malloc(sizeof(uint16_t));
     }
@@ -60,8 +64,6 @@ void inbound_encoder_init(
     enc->index = 0;
     enc->slice = slice_len;
 
-    uint16_t* sbuff = (uint16_t*)enc->buffer;
-    *sbuff          = enc->size;
 
     enc->partial_byte_eh = false;
 }
@@ -94,15 +96,15 @@ void encoder_add_next(encoder_frame_t* restrict enc, const uint8_t* restrict sli
                 enc->partial_byte_eh = false;
                 if (slice[i] == 0xFF) {
                     enc->buffer[enc->index++] = 0xFF;
-                } else {
+                } else if (slice[i] == 0xF0) {
                     enc->buffer[enc->index++] = 0;
                 }
             } else if (slice[i] == 0xFF) { //escape byte incomming
                 if (i + 1 < enc->slice) {
                     if (slice[++i] == 0xFF) {
                         enc->buffer[enc->index++] = 0xFF;
-                    } else if (!slice[i]) {
-                        enc->buffer[enc->index++] = 0xF0;
+                    } else if (slice[i] == 0xF0) {
+                        enc->buffer[enc->index++] = 0;
                     }
                 } else { //escape byte is in the next slice
                     enc->partial_byte_eh = true;
@@ -117,8 +119,8 @@ void encoder_add_next(encoder_frame_t* restrict enc, const uint8_t* restrict sli
 
     if (!enc->size && enc->index == sizeof(uint16_t)) { //confirmed size attained, realloc to full
         enc->size = *(uint16_t*)enc->buffer;
-        printf("aaaaaaaaa %d aaaaaaa\n", enc->size);
-        enc->len  = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+        printf("\n\n|%d|\n\n", enc->size);
+        enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
         //TODO check realloc
         enc->buffer = realloc(enc->buffer, enc->size);
     }
@@ -130,7 +132,7 @@ int encoder_verify(encoder_frame_t* restrict enc) {
 }
 
 int encoder_finished(encoder_frame_t* restrict enc) {
-    if (enc->index == enc->size) {
+    if (enc->size && enc->index == enc->size) {
         enc->crc32 = *(uint32_t*)(enc->buffer + enc->size - sizeof(uint32_t));
         return 1;
     }

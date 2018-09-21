@@ -35,7 +35,7 @@ void run_encoders_tests() {
         for (int i = 1; i <= 10; ++i) {
             printf("testing slice of %d bytes\n", i);
             outbound_encoder_init(&enc_in, (const uint8_t*)msg, len, i);
-            inbound_encoder_init(&enc_out, enc_in.size, i);
+            inbound_encoder_init(&enc_out, enc_in.len, i);
 
             uint8_t* slice = malloc(i);
             while (!encoder_finished(&enc_in)) {
@@ -49,6 +49,26 @@ void run_encoders_tests() {
             encoder_close(&enc_in);
             encoder_close(&enc_out);
         }
+    }
+    puts("\ntesting unknown inboud sizing\n");
+    {
+        outbound_encoder_init(&enc_in, (const uint8_t*)msg, len, 2);
+        inbound_encoder_init(&enc_out, 0, 2);
+
+        uint8_t slice[2];
+        while (!encoder_finished(&enc_in)) {
+            encoder_get_next(&enc_in, slice);
+            encoder_add_next(&enc_out, slice);
+        }
+
+        puts("==sending>");
+        encoder_print(&enc_in);
+        puts("==recieving>");
+        encoder_print(&enc_out);
+        TEST("crc32 check", encoder_verify(&enc_out));
+
+        encoder_close(&enc_in);
+        encoder_close(&enc_out);
     }
     puts("\ntr encoding test\n");
     {
@@ -89,6 +109,7 @@ void run_encoders_tests() {
         }
         puts("");
 
-        TEST("tr maintained 0, 0xFF, and regular data", test[0] == 'h' && test[2] == 0 && test[4] == 0xFF);
+        TEST("tr maintained 0, 0xFF, and regular data",
+            test[0] == 'h' && test[2] == 0 && test[4] == 0xFF);
     }
 }
