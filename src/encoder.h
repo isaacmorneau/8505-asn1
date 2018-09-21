@@ -18,7 +18,7 @@ typedef struct {
 
 void outbound_encoder_init(
     encoder_frame_t* enc, const uint8_t* msg, const size_t len, const size_t slice_len);
-void inbound_encoder_init(encoder_frame_t* enc, const uint16_t size, const size_t slice_len);
+void inbound_encoder_init(encoder_frame_t* enc, const uint16_t len, const size_t slice_len);
 void encoder_close(encoder_frame_t* enc);
 
 //for sending data
@@ -31,7 +31,7 @@ int encoder_verify(encoder_frame_t* enc);
 //check if there is more to send
 int encoder_finished(encoder_frame_t* enc);
 //print all info on the struct, useful for debugging
-void encoder_print(encoder_frame_t* enc);
+void encoder_print(const encoder_frame_t* enc);
 
 //find size to allocate for the transcoded buffer
 size_t tr_size(uint8_t* buffer, size_t len);

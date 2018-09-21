@@ -9,11 +9,11 @@
 void run_encoders_tests() {
     const char* msg = "testing message";
     size_t len      = strlen(msg);
-    encoder_msg_t enc_in, enc_out;
+    encoder_frame_t enc_in, enc_out;
     puts("\nbasic test\n");
     {
         outbound_encoder_init(&enc_in, (const uint8_t*)msg, len, 2);
-        inbound_encoder_init(&enc_out, enc_in.size, 2);
+        inbound_encoder_init(&enc_out, enc_in.len, 2);
 
         uint8_t slice[2];
         while (!encoder_finished(&enc_in)) {
@@ -25,11 +25,7 @@ void run_encoders_tests() {
         encoder_print(&enc_in);
         puts("==recieving>");
         encoder_print(&enc_out);
-        if (encoder_verify(&enc_out)) {
-            puts("[verified]");
-        } else {
-            puts("[not verified]");
-        }
+        TEST("crc32 check", encoder_verify(&enc_out));
 
         encoder_close(&enc_in);
         encoder_close(&enc_out);
@@ -37,7 +33,7 @@ void run_encoders_tests() {
     puts("\ndifferent field sizes\n");
     {
         for (int i = 1; i <= 10; ++i) {
-            printf("testing slice of %d bytes: ", i);
+            printf("testing slice of %d bytes\n", i);
             outbound_encoder_init(&enc_in, (const uint8_t*)msg, len, i);
             inbound_encoder_init(&enc_out, enc_in.size, i);
 
@@ -48,11 +44,7 @@ void run_encoders_tests() {
             }
             free(slice);
 
-            if (encoder_verify(&enc_out)) {
-                puts("[verified]");
-            } else {
-                puts("[not verified]");
-            }
+            TEST("crc32 check", encoder_verify(&enc_out));
 
             encoder_close(&enc_in);
             encoder_close(&enc_out);
@@ -72,10 +64,11 @@ void run_encoders_tests() {
         for (size_t i = 0; i < sizeof(test); ++i) {
             printf("%02X ", test[i]);
         }
+        puts("");
 
-        size_t s = tr_size(test, sizeof(test));
+        size_t s;
 
-        printf("\ntr size: %lu\n", s);
+        TEST("tr encoding sizing correct", (s = tr_size(test, sizeof(test))) == 9);
 
         uint8_t* test2 = malloc(s);
 
@@ -85,16 +78,17 @@ void run_encoders_tests() {
         for (size_t i = 0; i < s; ++i) {
             printf("%02X ", test2[i]);
         }
+        puts("");
 
         tr_decode(test, test2, s);
 
-        puts("\ndecoded data");
+        puts("decoded data");
 
         for (size_t i = 0; i < sizeof(test); ++i) {
             printf("%02X ", test[i]);
         }
-
         puts("");
 
+        TEST("tr maintained 0, 0xFF, and regular data", test[0] == 'h' && test[2] == 0 && test[4] == 0xFF);
     }
 }

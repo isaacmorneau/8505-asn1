@@ -45,20 +45,25 @@ void start_listening(const int port) {
     pthread_attr_init(&attr);
     pthread_create(&th_id, &attr, server_handler, (void*)&port);
     //pthread_detach(th_id);
-    void* ret;
+    void* ret = 0;
     pthread_join(th_id, ret);
 }
 
 int main(int argc, char** argv) {
-    const int port = 34854;
+    int port = 34854;
     int choice;
     while (1) {
-        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
-            {"tests", no_argument, 0, 't'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
-
         int option_index = 0;
-
-        choice = getopt_long(argc, argv, "vht", long_options, &option_index);
+#ifndef NDEBUG
+        static struct option long_options[]
+            = {{"version", no_argument, 0, 'v'}, {"tests", no_argument, 0, 't'},
+                {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        choice = getopt_long(argc, argv, "vhtp:", long_options, &option_index);
+#else
+        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
+            {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        choice = getopt_long(argc, argv, "vhp:", long_options, &option_index);
+#endif
 
         if (choice == -1)
             break;
@@ -66,9 +71,14 @@ int main(int argc, char** argv) {
             case 'v':
                 puts("v0.1");
                 break;
+            case 'p':
+                port = atoi(optarg);
+                break;
+#ifndef NDEBUG
             case 't':
                 run_encoders_tests();
                 return EXIT_SUCCESS;
+#endif
             case 'h':
                 puts("read the source");
                 return EXIT_SUCCESS;

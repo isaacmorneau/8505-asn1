@@ -99,7 +99,7 @@ uint8_t *base64_decode(const uint8_t *src, size_t len, size_t *out_len) {
     }
 
     olen = count / 4 * 3;
-    pos = out = os_malloc(olen);
+    pos = out = malloc(olen);
     if (out == NULL) {
         return NULL;
     }
