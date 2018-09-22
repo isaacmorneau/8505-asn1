@@ -2,6 +2,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -97,7 +98,10 @@ int add_epoll_fd(int efd, int ifd) {
 int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {
     static char buffer[UDP_SLICE];
     static socklen_t len = sizeof(struct sockaddr_storage);
-    ensure(recvfrom(sfd, buffer, UDP_SLICE, 0, (struct sockaddr *)storage, &len) != -1);
+    ensure_nonblock(recvfrom(sfd, buffer, UDP_SLICE, 0, (struct sockaddr *)storage, &len) != -1);
+    if (errno == EAGAIN) {
+        return 1;
+    }
     if (storage->ss_family == AF_INET6) {
         return 1; //we cant handle V6 yet
     }

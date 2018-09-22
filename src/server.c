@@ -5,10 +5,29 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include "encoder.h"
 #include "network.h"
 #include "test.h"
 
+void print_help() {
+    puts("-[-v]ersion - current version\n"
+         "-[-t]est    - run the test suite if compiled in debug mode\n"
+         "-[-f]ile    - the path to the file to recv\n"
+         "-[-p]ort    - the server port to connect to\n"
+         "--help      - this message\n");
+}
+
+const char* path = 0;
+
 void* server_handler(void* vport) {
+    encoder_frame_t enc;
+    inbound_encoder_init(&enc, 0, 2);
+
+    FILE* fp = fopen(path, "w+");
+    if (!fp) {
+        perror("error opening file");
+    }
+
     int efd = make_epoll();
     int sfd = make_bound_udp(*(int*)vport);
     set_non_blocking(sfd);
@@ -24,29 +43,29 @@ void* server_handler(void* vport) {
             if (EVENT_ERR(events, i) || EVENT_HUP(events, i)) {
                 // a socket got closed
                 continue;
-            } else if (EVENT_IN(events, i)) {
+            } else {
                 infd = EVENT_FD(events, i);
                 static uint8_t slice[2];
                 static struct sockaddr_storage storage;
-                extract_udp_slice(infd, &storage, slice);
-                printf(">%02X %02X\n", slice[0], slice[1]);
-                //TODO respond with ICMP
-                //TODO add slice to encoder fragment
+                while (1) {
+                    if (!extract_udp_slice(infd, &storage, slice)) {
+                        //TODO respond with ICMP
+                        printf("%0X %0X\n", slice[0], slice[1]);
+                        encoder_add_next(&enc, slice);
+                        if (encoder_finished(&enc)) {
+                            encoder_print(&enc);
+                            encoder_close(&enc);
+                            inbound_encoder_init(&enc, 0, 2);
+                        }
+                    } else {
+                        break;
+                    }
+                }
             }
         }
     }
 
     free(events);
-}
-
-void start_listening(const int port) {
-    pthread_t th_id;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_create(&th_id, &attr, server_handler, (void*)&port);
-    //pthread_detach(th_id);
-    void* ret = 0;
-    pthread_join(th_id, ret);
 }
 
 int main(int argc, char** argv) {
@@ -55,16 +74,17 @@ int main(int argc, char** argv) {
     while (1) {
         int option_index = 0;
 #ifndef NDEBUG
+#define OPTSTR "vtp:f:h"
         static struct option long_options[]
             = {{"version", no_argument, 0, 'v'}, {"tests", no_argument, 0, 't'},
                 {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
-        choice = getopt_long(argc, argv, "vhtp:", long_options, &option_index);
 #else
+#define OPTSTR "vp:f:h"
         static struct option long_options[] = {{"version", no_argument, 0, 'v'},
             {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
-        choice = getopt_long(argc, argv, "vhp:", long_options, &option_index);
 #endif
 
+        choice = getopt_long(argc, argv, OPTSTR, long_options, &option_index);
         if (choice == -1)
             break;
         switch (choice) {
@@ -74,24 +94,29 @@ int main(int argc, char** argv) {
             case 'p':
                 port = atoi(optarg);
                 break;
+            case 'f':
+                path = optarg;
+                break;
 #ifndef NDEBUG
             case 't':
                 run_encoders_tests();
                 return EXIT_SUCCESS;
 #endif
             case 'h':
-                puts("read the source");
-                return EXIT_SUCCESS;
             case '?':
-                /* getopt_long will have already printed an error */
-                break;
             default:
-                /* Not sure how to get here... */
+                print_help();
                 return EXIT_FAILURE;
         }
     }
 
-    start_listening(port);
+    pthread_t th_id;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_create(&th_id, &attr, server_handler, (void*)&port);
+    //pthread_detach(th_id);
+    void* ret = 0;
+    pthread_join(th_id, ret);
 
     return EXIT_SUCCESS;
 }

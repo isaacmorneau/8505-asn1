@@ -130,7 +130,7 @@ int encoder_verify(encoder_frame_t* restrict enc) {
 }
 
 int encoder_finished(encoder_frame_t* restrict enc) {
-    if (enc->size && enc->index == enc->size) {
+    if (enc->size && enc->index >= enc->size) {
         enc->crc32 = *(uint32_t*)(enc->buffer + enc->size - sizeof(uint32_t));
         return 1;
     }
