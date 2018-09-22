@@ -51,7 +51,7 @@ void inbound_encoder_init(
         enc->len  = len;
         enc->size = sizeof(uint16_t) + len + sizeof(uint32_t);
         //TODO check malloc
-        enc->buffer = malloc(enc->size);
+        enc->buffer     = malloc(enc->size);
         uint16_t* sbuff = (uint16_t*)enc->buffer;
         *sbuff          = enc->size;
         //dont bother to initialize crc
@@ -63,7 +63,6 @@ void inbound_encoder_init(
     //to keep the interfact the same start at 0 though the first uint16_t size is already known
     enc->index = 0;
     enc->slice = slice_len;
-
 
     enc->partial_byte_eh = false;
 }
@@ -117,10 +116,9 @@ void encoder_add_next(encoder_frame_t* restrict enc, const uint8_t* restrict sli
         }
     }
 
-    if (!enc->size && enc->index == sizeof(uint16_t)) { //confirmed size attained, realloc to full
+    if (!enc->size && enc->index >= sizeof(uint16_t)) { //confirmed size attained, realloc to full
         enc->size = *(uint16_t*)enc->buffer;
-        printf("\n\n|%d|\n\n", enc->size);
-        enc->len = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
+        enc->len  = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
         //TODO check realloc
         enc->buffer = realloc(enc->buffer, enc->size);
     }
