@@ -61,10 +61,6 @@ void run_encoders_tests() {
             encoder_add_next(&enc_in, slice);
         }
 
-        puts("==sending>");
-        encoder_print(&enc_out);
-        puts("==recieving>");
-        encoder_print(&enc_in);
         TEST("crc32 check", encoder_verify(&enc_in));
 
         encoder_close(&enc_in);
