@@ -132,12 +132,10 @@ int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_
     static char buffer[UDP_SLICE];
     static socklen_t len = sizeof(struct sockaddr_storage);
     ensure_nonblock(recvfrom(sfd, buffer, UDP_SLICE, 0, (struct sockaddr *)storage, &len) != -1);
-    if (errno == EAGAIN) {
-        return 1;
-    }
-    if (storage->ss_family == AF_INET6) {
+    if (errno == EAGAIN || storage->ss_family == AF_INET6) {
         return 1; //we cant handle V6 yet
     }
+
     struct sockaddr_in *addr = (struct sockaddr_in *)storage;
     //as the slice is two bytes use a uint16_t to copy both
     uint16_t *wslice = (uint16_t *)slice;
@@ -178,7 +176,7 @@ int insert_udp_slice(
 
     udph->source = *(int16_t *)slice;
     udph->dest   = sin->sin_port; //already in net endianess
-    udph->len    = sizeof(struct udphdr);
+    udph->len    = htons(sizeof(struct udphdr));
     udph->check  = 0;
 
     udph->check = csum((uint16_t *)(buffer + sizeof(struct iphdr)), udph->len);
