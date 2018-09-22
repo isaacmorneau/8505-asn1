@@ -1,31 +1,30 @@
 #pragma once
 
-#include <stdlib.h>
 #include <netdb.h>
+#include <stdlib.h>
 #include <sys/epoll.h>
 
 //==>assert macros<==
-#define ensure(expr)\
-    do {\
-        if (!(expr)) {\
-            fprintf(stderr, "%s::%s::%d\n\t", __FILE__, __FUNCTION__, __LINE__);\
-            perror(#expr);\
-            exit(1);\
-        }\
-    } while(0)
+#define ensure(expr)                                                             \
+    do {                                                                         \
+        if (!(expr)) {                                                           \
+            fprintf(stderr, "%s::%s::%d\n\t", __FILE__, __FUNCTION__, __LINE__); \
+            perror(#expr);                                                       \
+            exit(1);                                                             \
+        }                                                                        \
+    } while (0)
 
-#define ensure_nonblock(expr)\
-    do {\
-        if (!(expr) && errno != EAGAIN) {\
-            fprintf(stderr, "%s::%s::%d\n\t", __FILE__, __FUNCTION__, __LINE__);\
-            perror(#expr);\
-            exit(1);\
-        }\
-    } while(0)
-
+#define ensure_nonblock(expr)                                                    \
+    do {                                                                         \
+        if (!(expr) && errno != EAGAIN) {                                        \
+            fprintf(stderr, "%s::%s::%d\n\t", __FILE__, __FUNCTION__, __LINE__); \
+            perror(#expr);                                                       \
+            exit(1);                                                             \
+        }                                                                        \
+    } while (0)
 
 void set_non_blocking(int sfd);
-void make_storage(struct sockaddr_storage * addr, const char * host, int port);
+void make_storage(struct sockaddr_storage* addr, const char* host, int port);
 int make_bound_udp(int port);
 
 #define MAXEVENTS 256
@@ -39,11 +38,11 @@ int make_bound_udp(int port);
 #define EVENT_PTR(events, i) (events[i].data.ptr)
 
 int make_epoll();
-struct epoll_event * make_epoll_events();
-int wait_epoll(int efd, struct epoll_event * events);
-int add_epoll_ptr(int efd, int ifd, void * ptr);
+struct epoll_event* make_epoll_events();
+int wait_epoll(int efd, struct epoll_event* events);
+int add_epoll_ptr(int efd, int ifd, void* ptr);
 int add_epoll_fd(int efd, int ifd);
 
 #define UDP_SLICE 2
 int extract_udp_slice(int sfd, struct sockaddr_storage* storage, uint8_t* slice);
-int insert_udp_slice(struct sockaddr_storage* storage, uint8_t* slice);
+int insert_udp_slice(const int sfd, struct sockaddr_storage* storage, uint8_t* restrict slice);

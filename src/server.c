@@ -75,13 +75,14 @@ int main(int argc, char** argv) {
         int option_index = 0;
 #ifndef NDEBUG
 #define OPTSTR "vtp:f:h"
-        static struct option long_options[]
-            = {{"version", no_argument, 0, 'v'}, {"tests", no_argument, 0, 't'},
-                {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
+            {"tests", no_argument, 0, 't'}, {"file", required_argument, 0, 'f'},
+            {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 #else
 #define OPTSTR "vp:f:h"
-        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
-            {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
+        static struct option long_options[]
+            = {{"version", no_argument, 0, 'v'}, {"file", required_argument, 0, 'f'},
+                {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, 'h'}, {0, 0, 0, 0}};
 #endif
 
         choice = getopt_long(argc, argv, OPTSTR, long_options, &option_index);
@@ -108,6 +109,11 @@ int main(int argc, char** argv) {
                 print_help();
                 return EXIT_FAILURE;
         }
+    }
+
+    if (!path || !port) {
+        print_help();
+        return EXIT_FAILURE;
     }
 
     pthread_t th_id;

@@ -62,6 +62,8 @@ void run_encoders_tests() {
         }
 
         TEST("crc32 check", encoder_verify(&enc_in));
+        TEST("outbound finished", encoder_finished(&enc_out));
+        TEST("inbound finished", encoder_finished(&enc_in));
 
         encoder_close(&enc_in);
         encoder_close(&enc_out);
