@@ -39,27 +39,26 @@ void* server_handler(void* vport) {
     while (1) {
         static int n, i, infd;
         n = wait_epoll(efd, events);
+        printf("[%d]\n",n);
         for (i = 0; i < n; i++) {
             if (EVENT_ERR(events, i) || EVENT_HUP(events, i)) {
+                perror("error");
                 // a socket got closed
                 continue;
-            } else {
+            } else if (EVENT_IN(events, i)) {
                 infd = EVENT_FD(events, i);
                 static uint8_t slice[2];
                 static struct sockaddr_storage storage;
-                while (1) {
-                    if (!extract_udp_slice(infd, &storage, slice)) {
-                        //TODO respond with ICMP
-                        printf("%0X %0X\n", slice[0], slice[1]);
-                        encoder_add_next(&enc, slice);
-                        if (encoder_finished(&enc)) {
-                            encoder_print(&enc);
-                            encoder_close(&enc);
-                            inbound_encoder_init(&enc, 0, 2);
-                        }
-                    } else {
-                        break;
-                    }
+                if (extract_udp_slice(infd, &storage, slice)) {
+                    perror("what?");
+                }
+                //TODO respond with ICMP
+                printf("%0X %0X\n", slice[0], slice[1]);
+                encoder_add_next(&enc, slice);
+                if (encoder_finished(&enc)) {
+                    encoder_print(&enc);
+                    encoder_close(&enc);
+                    inbound_encoder_init(&enc, 0, 2);
                 }
             }
         }

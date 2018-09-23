@@ -110,20 +110,11 @@ int wait_epoll(int efd, struct epoll_event *restrict events) {
     return ret;
 }
 
-int add_epoll_ptr(int efd, int ifd, void *ptr) {
-    int ret;
-    static struct epoll_event event;
-    event.data.ptr = ptr;
-    event.events   = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
-    ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
-    return ret;
-}
-
 int add_epoll_fd(int efd, int ifd) {
     int ret;
     static struct epoll_event event;
     event.data.fd = ifd;
-    event.events  = EPOLLOUT | EPOLLIN | EPOLLET | EPOLLEXCLUSIVE;
+    event.events  = EPOLLIN | EPOLLEXCLUSIVE;
     ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
     return ret;
 }
@@ -146,7 +137,9 @@ int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_
 
 int insert_udp_slice(
     const int sfd, struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {
+    static int8_t pcheckbuff[sizeof(struct pseudo_header) + sizeof(struct udphdr)];
     static int8_t buffer[sizeof(struct iphdr) + sizeof(struct udphdr)];
+
     static struct iphdr *iph   = (struct iphdr *)buffer;
     static struct udphdr *udph = (struct udphdr *)(buffer + sizeof(struct iphdr));
     static int ipid            = 54321;
@@ -158,7 +151,9 @@ int insert_udp_slice(
         return 1;
     }
     struct sockaddr_in *sin = (struct sockaddr_in *)storage;
-    //struct pseudo_header psh;
+
+    struct pseudo_header *psh = (struct pseudo_header *)pcheckbuff;
+    struct udphdr *udpch      = (struct udphdr *)(pcheckbuff + sizeof(struct pseudo_header));
 
     iph->ihl      = 5;
     iph->version  = 4;
@@ -179,7 +174,16 @@ int insert_udp_slice(
     udph->len    = htons(sizeof(struct udphdr));
     udph->check  = 0;
 
-    udph->check = csum((uint16_t *)(buffer + sizeof(struct iphdr)), udph->len);
+    psh->source_address = iph->saddr;
+    psh->dest_address   = iph->daddr;
+    psh->placeholder    = 0;
+    psh->protocol       = IPPROTO_UDP;
+    psh->udp_length     = htons(sizeof(struct udphdr));
+
+    *udpch = *udph;
+
+    udph->check
+        = csum((uint16_t *)pcheckbuff, sizeof(struct pseudo_header) + sizeof(struct udphdr));
 
     //TODO support IPv6
     ensure(
