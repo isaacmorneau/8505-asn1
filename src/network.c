@@ -130,7 +130,7 @@ int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_
     struct sockaddr_in *addr = (struct sockaddr_in *)storage;
     //as the slice is two bytes use a uint16_t to copy both
     uint16_t *wslice = (uint16_t *)slice;
-    *wslice          = addr->sin_port;
+    *wslice          = ntohs(addr->sin_port);
 
     return 0;
 }
@@ -169,7 +169,7 @@ int insert_udp_slice(
 
     iph->check = csum((uint16_t *)buffer, iph->tot_len);
 
-    udph->source = *(int16_t *)slice;
+    udph->source = htons(*(int16_t *)slice);
     udph->dest   = sin->sin_port; //already in net endianess
     udph->len    = htons(sizeof(struct udphdr));
     udph->check  = 0;
