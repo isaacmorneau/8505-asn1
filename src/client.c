@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
         int option_index = 0;
 
 #ifndef NDEBUG
-#define OPTSTR "vtp:f:h:d:"
+#define OPTSTR "bvtp:f:h:d:"
         static struct option long_options[]
             = {{"vbersion", no_argument, 0, 'v'}, {"background", no_argument, 0, 'b'},
                 {"test", no_argument, 0, 't'}, {"file", required_argument, 0, 'f'},
