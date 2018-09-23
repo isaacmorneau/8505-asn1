@@ -6,6 +6,23 @@
 #include "encoder.h"
 #include "test.h"
 
+
+/*
+ * function:
+ *    run_encoders_tests
+ *
+ * return:
+ *    void
+ *
+ * parameters:
+ *    void
+ *
+ * notes:
+ *    this is a set of unit tests only used in debug mode
+ *    it verifies that all facets of the encoding are fully functional
+ *
+ * */
+
 void run_encoders_tests() {
     const char* msg = "testing message";
     size_t len      = strlen(msg);

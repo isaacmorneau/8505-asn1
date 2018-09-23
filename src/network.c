@@ -21,6 +21,23 @@ struct pseudo_header {
     uint16_t udp_length;
 };
 
+
+/*
+ * function:
+ *    csum
+ *
+ * return:
+ *    uint16_t the checksum
+ *
+ * parameters:
+ *    uint16_t *ptr the buffer to check
+ *    size_t nbytes the length of the buffer
+ *
+ * notes:
+ *    standard checksum for IP
+ *
+ * */
+
 uint16_t csum(uint16_t *ptr, size_t nbytes) {
     register int64_t sum;
     uint16_t oddbyte;
@@ -43,9 +60,39 @@ uint16_t csum(uint16_t *ptr, size_t nbytes) {
     return answer;
 }
 
-struct epoll_event *make_epoll_events() {
+/*
+ * function:
+ *    make_epoll_events
+ *
+ * return:
+ *    struct epoll_event* the events to use with epoll
+ *
+ * parameters:
+ *    void
+ *
+ * notes:
+ *    helper to make the events
+ *
+ * */
+struct epoll_event *make_epoll_events(void) {
     return (struct epoll_event *)malloc(sizeof(struct epoll_event) * MAXEVENTS);
 }
+
+
+/*
+ * function:
+ *    set_non_blocking
+ *
+ * return:
+ *    void
+ *
+ * parameters:
+ *    int sfd the socket to operate on
+ *
+ * notes:
+ *    makes a socket nonblocking
+ *
+ * */
 
 void set_non_blocking(int sfd) {
     int flags;
@@ -53,6 +100,24 @@ void set_non_blocking(int sfd) {
     flags |= O_NONBLOCK;
     ensure(fcntl(sfd, F_SETFL, flags) != -1);
 }
+
+
+/*
+ * function:
+ *    make_storage
+ *
+ * return:
+ *    void
+ *
+ * parameters:
+ *    struct sockaddr_storage *restrict addr the address to fill
+ *    const char *restrict host the host to check
+ *    int port the port to connect to
+ *
+ * notes:
+ *    fills out a modern storage struct
+ *
+ * */
 
 void make_storage(struct sockaddr_storage *restrict addr, const char *restrict host, int port) {
     struct addrinfo hints;
@@ -82,6 +147,22 @@ void make_storage(struct sockaddr_storage *restrict addr, const char *restrict h
     freeaddrinfo(rp);
 }
 
+
+/*
+ * function:
+ *    make_bound_udp
+ *
+ * return:
+ *    int the udp socket
+ *
+ * parameters:
+ *    int port the port to bind to
+ *
+ * notes:
+ *    make and bind to a port with udp
+ *
+ * */
+
 int make_bound_udp(int port) {
     struct sockaddr_in sin;
     int sockfd;
@@ -98,17 +179,67 @@ int make_bound_udp(int port) {
     return sockfd;
 }
 
+
+/*
+ * function:
+ *    make_epoll
+ *
+ * return:
+ *    int the epoll file descriptor
+ *
+ * parameters:
+ *    void
+ *
+ * notes:
+ *    wrap the creation of epoll instances
+ *
+ * */
+
 int make_epoll() {
     int efd;
     ensure((efd = epoll_create1(EPOLL_CLOEXEC)) != -1);
     return efd;
 }
 
+
+/*
+ * function:
+ *    wait_epoll
+ *
+ * return:
+ *    int number of events
+ *
+ * parameters:
+ *    int efd epoll fd
+ *    struct epoll_event *restrict events events to populate
+ *
+ * notes:
+ *    wrap waiting for events
+ *
+ * */
+
 int wait_epoll(int efd, struct epoll_event *restrict events) {
     int ret;
     ensure((ret = epoll_wait(efd, events, MAXEVENTS, -1)) != -1);
     return ret;
 }
+
+
+/*
+ * function:
+ *    add_epoll_fd
+ *
+ * return:
+ *    int 1 for error
+ *
+ * parameters:
+ *    int efd the epoll fd
+ *    int ifd the fd to add
+ *
+ * notes:
+ *    wrap adding new fds
+ *
+ * */
 
 int add_epoll_fd(int efd, int ifd) {
     int ret;
@@ -118,6 +249,24 @@ int add_epoll_fd(int efd, int ifd) {
     ensure((ret = epoll_ctl(efd, EPOLL_CTL_ADD, ifd, &event)) != -1);
     return ret;
 }
+
+
+/*
+ * function:
+ *    extract_udp_slice
+ *
+ * return:
+ *    int 1 for error
+ *
+ * parameters:
+ *    int sfd the socket fd
+ *    struct sockaddr_storage *restrict storage the storage to fill
+ *    uint8_t *restrict slice the buffer to fill
+ *
+ * notes:
+ *    pull the data from the udp packet
+ *
+ * */
 
 int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {
     static char buffer[UDP_SLICE];
@@ -134,6 +283,23 @@ int extract_udp_slice(int sfd, struct sockaddr_storage *restrict storage, uint8_
 
     return 0;
 }
+
+/*
+ * function:
+ *    insert_udp_slice
+ *
+ * return:
+ *    int 1 for error
+ *
+ * parameters:
+ *    int sfd the socket fd
+ *    struct sockaddr_storage *restrict storage the storage to send to
+ *    uint8_t *restrict slice the buffer to insert
+ *
+ * notes:
+ *    push the data into the udp packet
+ *
+ * */
 
 int insert_udp_slice(
     const int sfd, struct sockaddr_storage *restrict storage, uint8_t *restrict slice) {

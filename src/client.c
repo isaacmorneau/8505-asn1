@@ -14,7 +14,22 @@
 
 int exfil_file(const char* path, const char* host, const int port);
 
-void print_help() {
+
+/*
+ * function:
+ *    print_help
+ *
+ * return:
+ *    void
+ *
+ * parameters:
+ *    void
+ *
+ * notes:
+ *    print usage information
+ * */
+
+void print_help(void) {
     puts("-[-v]ersion - current version\n"
          "-[-t]est    - run the test suite if compiled in debug mode\n"
          "-[-f]ile    - the path to the file to send\n"
@@ -23,6 +38,22 @@ void print_help() {
          "-[-d]elay   - seconds between messages\n"
          "--help      - this message\n");
 }
+
+
+/*
+ * function:
+ *    main
+ *
+ * return:
+ *    int the status code of the program
+ *
+ * parameters:
+ *    int argc the number of arguments
+ *    char** argv the arguements as c strings
+ *
+ * notes:
+ *  parses the args and sends the file
+ * */
 
 int main(int argc, char** argv) {
     int port         = 34854;

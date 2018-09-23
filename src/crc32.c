@@ -131,6 +131,23 @@ static const uint32_t crc32_table[] = {0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4
 
 */
 
+
+/*
+ * function:
+ *    xcrc32
+ *
+ * return:
+ *    uint32_t the checksum
+ *
+ * parameters:
+ *    const uint8_t *buf the data to calculate on
+ *    int len the length of the data
+ *    uint32_t init the starting number to allow for multiple calculations across calls
+ *
+ * notes:
+ *    calculate a crc32 of a buffer
+ * */
+
 uint32_t xcrc32(const uint8_t *buf, int len, uint32_t init) {
     uint32_t crc = init;
     while (len--) {

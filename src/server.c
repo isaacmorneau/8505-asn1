@@ -9,6 +9,22 @@
 #include "network.h"
 #include "test.h"
 
+
+/*
+ * function:
+ *    print_help
+ *
+ * return:
+ *    void
+ *
+ * parameters:
+ *    void
+ *
+ * notes:
+ *    print out usage information
+ *
+ * */
+
 void print_help() {
     puts("-[-v]ersion - current version\n"
          "-[-t]est    - run the test suite if compiled in debug mode\n"
@@ -18,6 +34,22 @@ void print_help() {
 }
 
 const char* path = 0;
+
+
+/*
+ * function:
+ *    server_handler
+ *
+ * return:
+ *    void* unused
+ *
+ * parameters:
+ *    void* vport the port to listen on
+ *
+ * notes:
+ *    listen on the port for incoming data and add completed frames to a file
+ *
+ * */
 
 void* server_handler(void* vport) {
     encoder_frame_t enc;
@@ -65,6 +97,22 @@ void* server_handler(void* vport) {
     fclose(fp);
     free(events);
 }
+
+
+/*
+ * function:
+ *    main
+ *
+ * return:
+ *    int the status code of the program
+ *
+ * parameters:
+ *    int argc the number of arguments
+ *    char** argv the arguements as c strings
+ *
+ * notes:
+ *  parses the args and recieves the file
+ * */
 
 int main(int argc, char** argv) {
     int port = 34854;
