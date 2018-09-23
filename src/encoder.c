@@ -191,3 +191,7 @@ size_t tr_decode(uint8_t* restrict dest, uint8_t* restrict src, size_t len) {
     }
     return ret;
 }
+
+const uint8_t* encoder_data(const encoder_frame_t* restrict enc) {
+    return enc->buffer + sizeof(uint16_t);
+}

@@ -32,6 +32,8 @@ int encoder_verify(encoder_frame_t* enc);
 int encoder_finished(encoder_frame_t* enc);
 //print all info on the struct, useful for debugging
 void encoder_print(const encoder_frame_t* enc);
+//get the date inside the inbound packet
+const uint8_t* encoder_data(const encoder_frame_t* enc);
 
 //find size to allocate for the transcoded buffer
 size_t tr_size(uint8_t* buffer, size_t len);

@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
 
         struct timespec ns, rs;
         ns.tv_sec = delay;
-        ns.tv_usec = 0;
+        ns.tv_nsec = 0;
 
         uint8_t slice[2];
         while (!encoder_finished(&enc)) {
