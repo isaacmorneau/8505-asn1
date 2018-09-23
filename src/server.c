@@ -52,6 +52,8 @@ void* server_handler(void* vport) {
                 encoder_add_next(&enc, slice);
                 if (encoder_finished(&enc)) {
                     fwrite(encoder_data(&enc), 1, enc.len, fp);
+                    fflush(fp);
+                    encoder_print(&enc);
                     encoder_close(&enc);
                     inbound_encoder_init(&enc, 0, 2);
                 }
