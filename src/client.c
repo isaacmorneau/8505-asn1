@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "encoder.h"
@@ -113,7 +114,7 @@ int main(int argc, char** argv) {
         outbound_encoder_init(&enc, buffer, len, 2);
 
         struct timespec ns, rs;
-        ns.tv_sec = delay;
+        ns.tv_sec  = delay;
         ns.tv_nsec = 0;
 
         uint8_t slice[2];
