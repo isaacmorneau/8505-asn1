@@ -38,3 +38,24 @@ $ ./8505-asn1-server
 --help      - this message
 
 ```
+
+## Manifest
+
+Encoding Code
+
+- crc32
+- encoder
+- test
+
+Client Code
+
+- client
+- encoder
+- network
+
+Server Code
+
+- server
+- encoder
+- network
+
