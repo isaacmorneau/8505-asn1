@@ -23,6 +23,7 @@
  *
  * */
 
+#ifndef NDEBUG
 void run_encoders_tests() {
     const char* msg = "testing message";
     size_t len      = strlen(msg);
@@ -128,3 +129,4 @@ void run_encoders_tests() {
             test[0] == 'h' && test[2] == 0 && test[4] == 0xFF);
     }
 }
+#endif

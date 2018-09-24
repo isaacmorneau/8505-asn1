@@ -80,7 +80,7 @@ void* server_handler(void* vport) {
                 static uint8_t slice[2];
                 static struct sockaddr_storage storage;
                 extract_udp_slice(infd, &storage, slice);
-                //TODO respond with ICMP
+
                 encoder_add_next(&enc, slice);
                 if (encoder_finished(&enc)) {
                     fwrite(encoder_data(&enc), 1, enc.len, fp);

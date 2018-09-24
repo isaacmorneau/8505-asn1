@@ -132,7 +132,7 @@ void make_storage(struct sockaddr_storage *restrict addr, const char *restrict h
     ensure(getaddrinfo(host, NULL, &hints, &rp) == 0);
 
     //assuming the first result returned will be correct
-    //TODO find a way to check
+
     ensure(rp);
 
     //add the port manually
@@ -313,7 +313,7 @@ int insert_udp_slice(
     static const char *src_ip = "192.168.0.1";
 
     if (storage->ss_family == AF_INET6) {
-        //TODO support IPv6
+
         return 1;
     }
     struct sockaddr_in *sin = (struct sockaddr_in *)storage;
@@ -325,7 +325,7 @@ int insert_udp_slice(
     iph->version  = 4;
     iph->tos      = 0;
     iph->tot_len  = sizeof(struct iphdr) + sizeof(struct udphdr);
-    iph->id       = htonl(ipid++); //TODO mimic regular stack incrementing numbers better
+    iph->id       = htonl(ipid++);
     iph->frag_off = 0;
     iph->ttl      = 255;
     iph->protocol = IPPROTO_UDP;
@@ -351,7 +351,7 @@ int insert_udp_slice(
     udph->check
         = csum((uint16_t *)pcheckbuff, sizeof(struct pseudo_header) + sizeof(struct udphdr));
 
-    //TODO support IPv6
+
     ensure(
         sendto(sfd, buffer, iph->tot_len, 0, (struct sockaddr *)storage, sizeof(struct sockaddr_in))
         != -1);

@@ -27,7 +27,7 @@
 void outbound_encoder_init(encoder_frame_t* restrict enc, const uint8_t* restrict msg,
     const size_t len, const size_t slice_len) {
     enc->size = sizeof(uint16_t) + len + sizeof(uint32_t);
-    //TODO check malloc
+
     enc->buffer = malloc(enc->size);
     enc->crc32  = (uint32_t)-1;
     enc->len    = len;
@@ -50,7 +50,7 @@ void outbound_encoder_init(encoder_frame_t* restrict enc, const uint8_t* restric
     //zeros detected, remove zeros with encoding
     if (trs != enc->size) {
         //create new buffer to move to
-        //TODO check malloc
+
         uint8_t* trtmp = malloc(trs);
         tr_encode(trtmp, enc->buffer, enc->size);
 
@@ -85,7 +85,7 @@ void inbound_encoder_init(
     if (len) { //we know the frame size
         enc->len  = len;
         enc->size = sizeof(uint16_t) + len + sizeof(uint32_t);
-        //TODO check malloc
+
         enc->buffer     = malloc(enc->size);
         uint16_t* sbuff = (uint16_t*)enc->buffer;
         *sbuff          = enc->size;
@@ -204,7 +204,7 @@ void encoder_add_next(encoder_frame_t* restrict enc, const uint8_t* restrict sli
     if (!enc->size && enc->index >= sizeof(uint16_t)) { //confirmed size attained, realloc to full
         enc->size = *(uint16_t*)enc->buffer;
         enc->len  = enc->size - sizeof(uint16_t) - sizeof(uint32_t);
-        //TODO check realloc
+
         enc->buffer = realloc(enc->buffer, enc->size);
     }
 }
